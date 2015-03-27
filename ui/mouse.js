@@ -27,9 +27,9 @@
 	}
 }(function( $ ) {
 
-this.stopTrigger        = "MSPointerUp." + this.widgetName + " touchend." + this.widgetName + " mouseup." + this.widgetName;
+
 var mouseHandled = false;
-$( document ).on(this.stopTrigger, function() {
+$( document ).on("pointerup", function() {
 	mouseHandled = false;
 });
 
@@ -43,14 +43,8 @@ return $.widget("ui.mouse", {
 	_mouseInit: function() {
 		var that = this;
         
-        this.moveTrigger        = "MSPointerMove." + this.widgetName + " touchmove." + this.widgetName + " mousemove." + this.widgetName;
-        this.startTrigger       = "MSPointerDown." + this.widgetName + " touchstart." + this.widgetName + " mousedown." + this.widgetName;
-        this.stopTrigger        = "MSPointerUp." + this.widgetName + " touchend." + this.widgetName + " mouseup." + this.widgetName;
-        this.clickTrigger       = "click tap";
-
 		this.element
-			.on(this.startTrigger, function(event) {
-                
+			.on("pointerdown", function(event) {
 				return that._mouseDown(event);
 			})
 			.on("click", function(event) {
@@ -88,8 +82,8 @@ return $.widget("ui.mouse", {
 		this.element.unbind("." + this.widgetName);
 		if ( this._mouseMoveDelegate ) {
 			this.document
-				.off(this.moveTrigger, this._mouseMoveDelegate)
-				.off(this.stopTrigger, this._mouseUpDelegate);
+				.off("pointermove", this._mouseMoveDelegate)
+				.off("pointerup", this._mouseUpDelegate);
 		}
 	},
 
@@ -111,7 +105,7 @@ return $.widget("ui.mouse", {
 
 		var that = this,
 			btnIsLeft = (event.which === 1),
-            touchEvent = (event.type === "touchstart"),
+            touchEvent = (event.type === "pointerdown"),
 			// event.target.nodeName works around a bug in IE 8 with
 			// disabled inputs (#7620)
 			elIsCancel = (typeof this.options.cancel === "string" && event.target.nodeName ? $(event.target).closest(this.options.cancel).length : false);
@@ -148,8 +142,8 @@ return $.widget("ui.mouse", {
 		};
 
 		this.document
-			.on( this.moveTrigger, this._mouseMoveDelegate )
-			.on( this.stopTrigger, this._mouseUpDelegate );
+			.on( "pointermove", this._mouseMoveDelegate )
+			.on( "pointerup", this._mouseUpDelegate );
 
 		event.preventDefault();
 
@@ -159,7 +153,6 @@ return $.widget("ui.mouse", {
 
 	_mouseMove: function(event) {
         this.standardizeEvent(event);
-        console.log(event);
 		// Only check for mouseups outside the document if you've moved inside the document
 		// at least once. This prevents the firing of mouseup in the case of IE<9, which will
 		// fire a mousemove event if content is placed under the cursor. See #7778
@@ -195,8 +188,8 @@ return $.widget("ui.mouse", {
 
 	_mouseUp: function(event) {
 		this.document
-			.off( this.moveTrigger, this._mouseMoveDelegate )
-			.off( this.stopTrigger, this._mouseUpDelegate );
+			.off( "pointermove", this._mouseMoveDelegate )
+			.off( "pointerup", this._mouseUpDelegate );
 
 		if (this._mouseStarted) {
 			this._mouseStarted = false;
