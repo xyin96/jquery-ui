@@ -27,8 +27,9 @@
 	}
 }(function( $ ) {
 
+this.stopTrigger        = "MSPointerUp." + this.widgetName + " touchend." + this.widgetName + " mouseup." + this.widgetName;
 var mouseHandled = false;
-$( document ).mouseup( function() {
+$( document ).on(this.stopTrigger, function() {
 	mouseHandled = false;
 });
 
@@ -41,12 +42,16 @@ return $.widget("ui.mouse", {
 	},
 	_mouseInit: function() {
 		var that = this;
+        
+        this.moveTrigger        = "MSPointerMove." + this.widgetName + " touchmove." + this.widgetName + " mousemove." + this.widgetName;
+        this.startTrigger       = "MSPointerDown." + this.widgetName + " touchstart." + this.widgetName + " mousedown." + this.widgetName;
+        this.stopTrigger        = "MSPointerUp." + this.widgetName + " touchend." + this.widgetName + " mouseup." + this.widgetName;
 
 		this.element
-			.bind("mousedown." + this.widgetName, function(event) {
+			.on(this.startTrigger, function(event) {
 				return that._mouseDown(event);
 			})
-			.bind("click." + this.widgetName, function(event) {
+			.on("click." + this.widgetName, function(event) {
 				if (true === $.data(event.target, that.widgetName + ".preventClickEvent")) {
 					$.removeData(event.target, that.widgetName + ".preventClickEvent");
 					event.stopImmediatePropagation();
@@ -55,6 +60,23 @@ return $.widget("ui.mouse", {
 			});
 
 		this.started = false;
+        
+        this.standardizeEvent = function(event){
+        if (("MSPointerEvent" in window) || !event.originalEvent.touches ) {
+
+            if ( event.pageX  ) {
+                      event.pageX      = event.pageX;
+                      event.pageY      = event.pageY;
+            } else {
+              event.pageX      = event.originalEvent.pageX;
+              event.pageY      = event.originalEvent.pageY;
+            } 
+        } else {
+                event.pageX      = event.originalEvent.touches[0].pageX;
+                event.pageY      = event.originalEvent.touches[0].pageY;
+        }
+            return event;
+        }
 	},
 
 	// TODO: make sure destroying one instance of mouse doesn't mess with
@@ -63,8 +85,8 @@ return $.widget("ui.mouse", {
 		this.element.unbind("." + this.widgetName);
 		if ( this._mouseMoveDelegate ) {
 			this.document
-				.unbind("mousemove." + this.widgetName, this._mouseMoveDelegate)
-				.unbind("mouseup." + this.widgetName, this._mouseUpDelegate);
+				.off(this.moveTrigger, this._mouseMoveDelegate)
+				.off(this.stopTrigger, this._mouseUpDelegate);
 		}
 	},
 
@@ -75,18 +97,21 @@ return $.widget("ui.mouse", {
 		}
 
 		this._mouseMoved = false;
+        
+        this.standardizeEvent(event);
 
 		// we may have missed mouseup (out of window)
 		(this._mouseStarted && this._mouseUp(event));
-
+        
 		this._mouseDownEvent = event;
 
 		var that = this,
 			btnIsLeft = (event.which === 1),
+            touchEvent = (event.type === "touchstart"),
 			// event.target.nodeName works around a bug in IE 8 with
 			// disabled inputs (#7620)
 			elIsCancel = (typeof this.options.cancel === "string" && event.target.nodeName ? $(event.target).closest(this.options.cancel).length : false);
-		if (!btnIsLeft || elIsCancel || !this._mouseCapture(event)) {
+		if ((!touchEvent && !btnIsLeft) || elIsCancel || !this._mouseCapture(event)) {
 			return true;
 		}
 
@@ -119,8 +144,8 @@ return $.widget("ui.mouse", {
 		};
 
 		this.document
-			.bind( "mousemove." + this.widgetName, this._mouseMoveDelegate )
-			.bind( "mouseup." + this.widgetName, this._mouseUpDelegate );
+			.on( this.moveTrigger, this._mouseMoveDelegate )
+			.on( this.stopTrigger, this._mouseUpDelegate );
 
 		event.preventDefault();
 
@@ -129,6 +154,8 @@ return $.widget("ui.mouse", {
 	},
 
 	_mouseMove: function(event) {
+        console.log(event);
+        this.standardizeEvent(event);
 		// Only check for mouseups outside the document if you've moved inside the document
 		// at least once. This prevents the firing of mouseup in the case of IE<9, which will
 		// fire a mousemove event if content is placed under the cursor. See #7778
@@ -164,8 +191,8 @@ return $.widget("ui.mouse", {
 
 	_mouseUp: function(event) {
 		this.document
-			.unbind( "mousemove." + this.widgetName, this._mouseMoveDelegate )
-			.unbind( "mouseup." + this.widgetName, this._mouseUpDelegate );
+			.off( this.moveTrigger, this._mouseMoveDelegate )
+			.off( this.stopTrigger, this._mouseUpDelegate );
 
 		if (this._mouseStarted) {
 			this._mouseStarted = false;
